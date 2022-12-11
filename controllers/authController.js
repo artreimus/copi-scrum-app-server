@@ -17,20 +17,18 @@ const crypto = require('crypto');
 const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
-  console.log(req.body);
-
   if (!username || !email || !password) {
-    throw new CustomError.BadRequestError('Please provide username and email');
+    throw new CustomError.BadRequestError('Plea se provide username and email');
   }
 
   const usernameAlreadyExist = await User.findOne({ username })
     .collation({ locale: 'en', strength: 2 })
-    .lean()
+    .select('_id')
     .exec();
 
   const emailAlreadyExist = await User.findOne({ email })
     .collation({ locale: 'en', strength: 2 })
-    .lean()
+    .select('_id')
     .exec();
 
   if (usernameAlreadyExist || emailAlreadyExist) {

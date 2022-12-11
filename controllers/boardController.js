@@ -3,12 +3,16 @@ const Board = require('../models/Board');
 const asyncHandler = require('express-async-handler');
 const CustomError = require('../errors');
 const { StatusCodes } = require('http-status-codes');
+const { authorizeBoardUser, authorizeBoardAdmin } = require('../utils');
 
 // @desc Get all boards
 // @route GET /boards
-// @access Private
+// @access Public
 const getAllBoards = asyncHandler(async (req, res) => {
-  const boards = await Board.find().lean();
+  const boards = await Board.find()
+    .populate({ path: 'admins users', select: 'username' })
+    .lean()
+    .select('-password');
 
   if (!boards?.length) {
     throw new CustomError.NotFoundError('No board found');
@@ -19,10 +23,12 @@ const getAllBoards = asyncHandler(async (req, res) => {
 
 // @desc Get board
 // @route GET /boards/:id
-// @access Private
+// @access Public
 const getSingleBoard = asyncHandler(async (req, res) => {
   const { id: boardId } = req.params;
-  const board = await Board.findById(boardId).lean();
+  const board = await Board.findById(boardId)
+    .populate({ path: 'admins users', select: 'username' })
+    .lean();
 
   if (!board) {
     throw new CustomError.NotFoundError(`No board with id ${boardId}found`);
@@ -37,13 +43,11 @@ const getSingleBoard = asyncHandler(async (req, res) => {
 // @route POST /boards
 // @access Private
 const createBoard = asyncHandler(async (req, res) => {
-  const { title, description, startDate } = req.body;
-  const userId = req.userId;
+  const { title, description, startDate, endDate, password } = req.body;
+  const { userId } = req;
 
-  if (!title || !description) {
-    throw new CustomError.BadRequestError(
-      'Please provide title and description'
-    );
+  if (!title || !description || !userId || !startDate || !endDate) {
+    throw new CustomError.BadRequestError('Please provide all fields');
   }
 
   const duplicate = await Board.findOne({ title })
@@ -57,28 +61,26 @@ const createBoard = asyncHandler(async (req, res) => {
     );
   }
 
-  const boardInfo = startDate
-    ? {
-        admins: [userId],
-        title,
-        description,
-        startDate,
-      }
-    : {
-        admins: [userId],
-        title,
-        description,
-      };
+  const boardInfo = {
+    admins: [userId],
+    title,
+    description,
+    startDate,
+    endDate,
+  };
+
+  console.log('boardInfo', boardInfo);
+
+  if (password) {
+    boardInfo.password = password;
+    boardInfo.private = true;
+  }
 
   const board = await Board.create(boardInfo);
 
-  if (board) {
-    return res
-      .status(StatusCodes.CREATED)
-      .json({ message: 'New board created' });
-  } else {
-    throw new CustomError.BadRequestError('Error creating board');
-  }
+  return res
+    .status(StatusCodes.CREATED)
+    .json({ message: 'New board created', board });
 });
 
 // @desc Update a board
@@ -86,19 +88,30 @@ const createBoard = asyncHandler(async (req, res) => {
 // @access Private
 const updateBoard = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
-  const { title, description, completed, startDate, endDate } = req.body;
+  const { userId } = req;
 
-  // const board = await Board.findById(boardId).exec();
-  const board = await Board.findOneAndUpdate({ _id: boardId }, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const board = await Board.findById(boardId);
 
   if (!board) {
     throw new CustomError.NotFoundError(`No board with id: ${boardId}`);
   }
 
-  res.status(StatusCodes.OK).json({ message: `${board.title} updated`, board });
+  if (!authorizeBoardAdmin(board, userId)) {
+    throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
+  }
+
+  const updatedBoard = await Board.findOneAndUpdate(
+    { _id: boardId },
+    req.body,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  res
+    .status(StatusCodes.OK)
+    .json({ message: `${board.title} updated`, updatedBoard });
 });
 
 // @desc Update the admins in a board
@@ -106,12 +119,17 @@ const updateBoard = asyncHandler(async (req, res) => {
 // @access Private
 const updateBoardAdmins = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
-  const { users: admins } = req.body;
+  const { admins } = req.body;
+  const { userId } = req;
 
   const board = await Board.findById(boardId).exec();
 
   if (!board) {
     throw new CustomError.NotFoundError(`No board with id: ${boardId}`);
+  }
+
+  if (!authorizeBoardAdmin(board, userId)) {
+    throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
   }
 
   const allUsers = await User.find().select('_id');
@@ -136,6 +154,12 @@ const updateBoardAdmins = asyncHandler(async (req, res) => {
     }
   });
 
+  // downgrade from admin to user
+  board.admins.forEach((admin) => {
+    if (!admins.includes(admin.toString())) {
+      board.users?.push(admin);
+    }
+  });
   board.admins = [...existingAdmins];
 
   const updatedBoard = await board.save();
@@ -152,11 +176,16 @@ const updateBoardAdmins = asyncHandler(async (req, res) => {
 const updateBoardUsers = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
   const { users } = req.body;
+  const { userId } = req;
 
   const board = await Board.findById(boardId).exec();
 
   if (!board) {
     throw new CustomError.NotFoundError(`No board with id: ${boardId}`);
+  }
+
+  if (!authorizeBoardAdmin(board, userId)) {
+    throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
   }
 
   const allUsers = await User.find().select('_id');
@@ -170,23 +199,12 @@ const updateBoardUsers = asyncHandler(async (req, res) => {
     if (users?.includes(user._id.toString())) existingUsers.push(user._id);
   });
 
-  if (!existingUsers.length) {
-    throw new CustomError.NotFoundError('Users not found');
-  }
-
-  // downgrade from  admin to user
-  existingUsers.forEach((user) => {
-    if (board.admins?.includes(user)) {
-      board.admins?.pull(user);
-    }
-  });
-
   board.users = [...existingUsers];
 
   const updatedBoard = await board.save();
 
   res.status(StatusCodes.OK).json({
-    message: `${updatedBoard.title} admins updated`,
+    message: `${updatedBoard.title} users updated`,
     board: updatedBoard,
   });
 });
@@ -196,6 +214,7 @@ const updateBoardUsers = asyncHandler(async (req, res) => {
 // @access Private
 const deleteBoard = asyncHandler(async (req, res) => {
   const id = req.params.id;
+  const { userId } = req;
 
   if (!id) {
     throw new CustomError.BadRequestError('Please provider board ID');
@@ -205,6 +224,10 @@ const deleteBoard = asyncHandler(async (req, res) => {
 
   if (!board) {
     throw new CustomError.NotFoundError(`No board with id: ${id}`);
+  }
+
+  if (!authorizeBoardAdmin(board, userId)) {
+    throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
   }
 
   const result = await board.deleteOne();
@@ -217,6 +240,48 @@ const deleteBoard = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc Access a board
+// @route POST /boards/:id/accessBoard
+// @access Private
+const accessBoard = asyncHandler(async (req, res) => {
+  const { password, userId } = req.body;
+  const boardId = req.params.id;
+
+  const board = await Board.findById(boardId).exec();
+
+  if (!board) {
+    throw new CustomError.NotFoundError(`No board with id: ${id}`);
+  }
+
+  if (authorizeBoardUser(board, userId)) {
+    return res
+      .status(StatusCodes.OK)
+      .json({ message: 'User credentials valid' });
+  }
+
+  if (board.private) {
+    if (!password) {
+      throw new CustomError.UnauthenticatedError('Please provide credentials');
+    }
+    const isPasswordCorrect = await board.comparePassword(password);
+    if (!isPasswordCorrect) {
+      throw new CustomError.UnauthenticatedError('Invalid credentials');
+    }
+  }
+
+  // add user to board's users if it passes all validations
+  board.users.push(userId);
+
+  const result = await board.save();
+
+  if (result) {
+    const reply = `User ${userId} added to board: ${result.title}`;
+    res.status(StatusCodes.OK).json({ message: reply });
+  } else {
+    throw new CustomError.BadRequestError('Error accessing board');
+  }
+});
+
 module.exports = {
   getAllBoards,
   getSingleBoard,
@@ -225,4 +290,5 @@ module.exports = {
   updateBoardAdmins,
   updateBoardUsers,
   deleteBoard,
+  accessBoard,
 };

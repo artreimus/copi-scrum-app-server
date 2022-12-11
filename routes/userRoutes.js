@@ -6,7 +6,6 @@ const {
   getSingleUser,
 } = require('../controllers/userControllers');
 const verifyJWT = require('../middleware/verifyJWT');
-const verifyRole = require('../middleware/verifyRole');
 // router.use(verifyJWT);
 
 router.get('/', getAllUsers);

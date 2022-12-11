@@ -24,13 +24,17 @@ const NoteSchema = new mongoose.Schema(
     status: {
       type: String,
       default: 'To do',
-      enum: ['To do', 'In Progress', 'Finished'],
+      enum: ['To do', 'In Progress', 'Testing', 'Done'],
     },
     startDate: {
       type: Date,
     },
     endDate: {
       type: Date,
+    },
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Board',
     },
   },
   { timestamps: true }

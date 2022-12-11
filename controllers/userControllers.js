@@ -3,12 +3,17 @@ const Note = require('../models/Note');
 const asyncHandler = require('express-async-handler');
 const CustomError = require('../errors');
 const { StatusCodes } = require('http-status-codes');
-
+const {
+  createTokenUser,
+  createJWT,
+  attachCookieToResponse,
+} = require('../utils');
 // @desc Get all users
 // @route GET /users
 // @access Private
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select('-password').lean();
+
   if (!users?.length) {
     throw new CustomError.NotFoundError('No users found');
   }
@@ -19,7 +24,6 @@ const getAllUsers = asyncHandler(async (req, res) => {
 // @route GET /users/:id
 // @access Private
 const getSingleUser = asyncHandler(async (req, res) => {
-  console.log('getting user.');
   const user = await User.findOne({ _id: req.params.id })
     .select('-password')
     .lean();
@@ -27,9 +31,6 @@ const getSingleUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new CustomError.NotFoundError('User not found');
   }
-
-  console.log(req.user);
-  // checkPermissions(req.user,user._id);
 
   res.status(StatusCodes.OK).json({ user });
 });
@@ -39,11 +40,10 @@ const getSingleUser = asyncHandler(async (req, res) => {
 // @access Private
 const updateUser = asyncHandler(async (req, res) => {
   const { username, email, oldPassword, newPassword } = req.body;
-  const userId = req.params.id;
 
-  const user = await User.findById(userId).exec();
+  const foundUser = await User.findById(userId).exec();
 
-  if (!user) {
+  if (!foundUser) {
     throw new CustomError.NotFoundError(`No user with id: ${userId}`);
   }
 
@@ -56,7 +56,7 @@ const updateUser = asyncHandler(async (req, res) => {
     if (duplicate && duplicate?._id.toString() !== userId) {
       throw new CustomError.ConflictError(`Email ${email} already taken`);
     }
-    user.email = email;
+    foundUser.email = email;
   }
 
   if (username) {
@@ -68,22 +68,32 @@ const updateUser = asyncHandler(async (req, res) => {
     if (duplicate && duplicate?._id.toString() !== userId) {
       throw new CustomError.ConflictError(`Username ${username} already taken`);
     }
-    user.username = username;
+    foundUser.username = username;
   }
 
   if (newPassword && oldPassword) {
-    const isPasswordCorrect = await user.comparePassword(oldPassword);
+    const isPasswordCorrect = await foundUser.comparePassword(oldPassword);
     if (!isPasswordCorrect) {
       throw new CustomError.UnauthenticatedError('Invalid credentials');
     }
-    user.password = newPassword;
+    foundUser.password = newPassword;
   }
 
-  const updatedUser = await user.save();
+  const updatedUser = await foundUser.save();
+
+  const user = createTokenUser(updatedUser);
+
+  const accessToken = createJWT(
+    { user },
+    process.env.ACCESS_TOKEN_SECRET,
+    '15m'
+  );
+
+  attachCookieToResponse({ res, user });
 
   res
     .status(StatusCodes.OK)
-    .json({ message: `${updatedUser.username} updated` });
+    .json({ message: `${updatedUser.username} updated`, accessToken });
 });
 
 module.exports = {
