@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema(
       required: [true, 'Please provide username'],
       trim: true,
       minlength: 3,
-      maxlength: 50,
+      maxlength: 30,
     },
     email: {
       type: String,
@@ -22,6 +22,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide user password'],
       minlength: 6,
+      maxlength: 100,
     },
     verificationToken: String,
     isVerified: { type: Boolean, default: false },

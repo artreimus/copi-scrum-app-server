@@ -26,12 +26,19 @@ const BoardSchema = new mongoose.Schema(
     title: {
       type: String,
       required: [true, 'Please provide board title'],
+      minlength: 5,
+      maxlength: 25,
     },
     description: {
       type: String,
       required: [true, 'Please provide board description'],
+      minlength: 5,
+      maxlength: 100,
     },
-    password: { type: String },
+    password: {
+      type: String,
+      maxlength: 100,
+    },
     private: {
       type: Boolean,
       default: false,
