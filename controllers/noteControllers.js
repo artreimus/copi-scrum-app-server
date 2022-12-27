@@ -5,6 +5,7 @@ const CustomError = require('../errors');
 const { StatusCodes } = require('http-status-codes');
 const Board = require('../models/Board');
 const { verifyNoteStatus } = require('../utils');
+const validateDates = require('../utils/validateDates');
 
 // @desc Get all notes
 // @route GET /notes
@@ -39,7 +40,7 @@ const getSingleNote = asyncHandler(async (req, res) => {
 // @route POST /notes
 // @access Private
 const createNote = asyncHandler(async (req, res) => {
-  const { title, text, startDate, boardId, users } = req.body;
+  const { title, text, boardId, users } = req.body;
   const userId = req.userId;
 
   console.log('boardId', boardId);
@@ -73,7 +74,6 @@ const createNote = asyncHandler(async (req, res) => {
     noteCreator: userId,
     users,
     boardId,
-    startDate,
   };
 
   const note = await Note.create(noteInfo);
@@ -95,13 +95,18 @@ const updateNote = asyncHandler(async (req, res) => {
   const noteId = req.params.id;
 
   if (status) {
+    if (startDate && endDate) {
+      if (!validateDates(startDate, endDate)) {
+        throw new CustomError.BadRequestError('Invalid dates');
+      }
+    }
+
     if (!verifyNoteStatus({ status, startDate, endDate })) {
       throw new CustomError.BadRequestError(
         `Note status should be in sync with start date and end date`
       );
     }
   }
-  console.log(status);
 
   const note = await Note.findOneAndUpdate({ _id: noteId }, req.body, {
     new: true,
