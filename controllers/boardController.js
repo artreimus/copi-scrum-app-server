@@ -1,9 +1,11 @@
 const User = require('../models/User');
 const Board = require('../models/Board');
+const Note = require('../models/Note');
 const asyncHandler = require('express-async-handler');
 const CustomError = require('../errors');
 const { StatusCodes } = require('http-status-codes');
 const { authorizeBoardUser, authorizeBoardAdmin } = require('../utils');
+const validateDates = require('../utils/validateDates');
 
 // @desc Get all boards
 // @route GET /boards
@@ -50,6 +52,10 @@ const createBoard = asyncHandler(async (req, res) => {
     throw new CustomError.BadRequestError('Please provide all fields');
   }
 
+  if (!validateDates(startDate, endDate)) {
+    throw new CustomError.BadRequestError('Invalid dates');
+  }
+
   const duplicate = await Board.findOne({ title })
     .collation({ locale: 'en', strength: 2 })
     .lean()
@@ -69,9 +75,12 @@ const createBoard = asyncHandler(async (req, res) => {
     endDate,
   };
 
-  console.log('boardInfo', boardInfo);
-
   if (password) {
+    if (password.length < 6) {
+      throw new CustomError.BadRequestError(
+        `Password must be 6-100 characters`
+      );
+    }
     boardInfo.password = password;
     boardInfo.private = true;
   }
@@ -84,10 +93,12 @@ const createBoard = asyncHandler(async (req, res) => {
 });
 
 // @desc Update a board
-// @route PATCH /boards
+// @route PATCH /boards/:id
 // @access Private
 const updateBoard = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
+  const { oldPassword, newPassword, title, description, startDate, endDate } =
+    req.body;
   const { userId } = req;
 
   const board = await Board.findById(boardId);
@@ -100,14 +111,52 @@ const updateBoard = asyncHandler(async (req, res) => {
     throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
   }
 
-  const updatedBoard = await Board.findOneAndUpdate(
-    { _id: boardId },
-    req.body,
-    {
-      new: true,
-      runValidators: true,
+  if (!validateDates(startDate, endDate)) {
+    throw new CustomError.BadRequestError('Invalid dates');
+  }
+
+  if (title) {
+    const duplicate = await Board.findOne({ title })
+      .collation({ locale: 'en', strength: 2 })
+      .lean()
+      .exec();
+
+    if (duplicate && duplicate?._id.toString() !== boardId) {
+      throw new CustomError.ConflictError(`Title ${title} already taken`);
     }
-  );
+    board.title = title;
+  }
+
+  if (newPassword && newPassword.length < 6) {
+    throw new CustomError.BadRequestError(`Password must be 6-100 characters`);
+  }
+
+  // Changing password of a public board
+  if (newPassword && !board.private) {
+    board.password = newPassword;
+    board.private = true;
+  }
+
+  // Changing password of a private board
+  if (oldPassword && board.private) {
+    const isPasswordCorrect = await board.comparePassword(oldPassword);
+    if (!isPasswordCorrect) {
+      throw new CustomError.UnauthenticatedError('Invalid board password');
+    }
+
+    if (newPassword) {
+      board.password = newPassword;
+    } else {
+      board.password = '';
+      board.private = false;
+    }
+  }
+
+  board.description = description;
+  board.startDate = startDate;
+  board.endDate = endDate;
+
+  const updatedBoard = await board.save();
 
   res
     .status(StatusCodes.OK)
@@ -115,7 +164,7 @@ const updateBoard = asyncHandler(async (req, res) => {
 });
 
 // @desc Update the admins in a board
-// @route PATCH /boards/updateBoardAdmins
+// @route PATCH /boards/:id/updateBoardAdmins
 // @access Private
 const updateBoardAdmins = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
@@ -171,7 +220,7 @@ const updateBoardAdmins = asyncHandler(async (req, res) => {
 });
 
 // @desc Update the users in a board
-// @route PATCH /boards/updateBoardUsers
+// @route PATCH /boards/:id/updateBoardUsers
 // @access Private
 const updateBoardUsers = asyncHandler(async (req, res) => {
   const boardId = req.params.id;
@@ -209,6 +258,32 @@ const updateBoardUsers = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc Update the users in a board
+// @route PATCH /boards/:id/updateBoardUsers
+// @access Private
+const leaveBoard = asyncHandler(async (req, res) => {
+  const boardId = req.params.id;
+  const { userId } = req;
+
+  const board = await Board.findById(boardId).exec();
+
+  if (!board) {
+    throw new CustomError.NotFoundError(`No board with id: ${boardId}`);
+  }
+
+  if (authorizeBoardAdmin(board, userId)) {
+    board.admins = board.admins.filter((admin) => admin.toString() !== userId);
+  } else {
+    board.users = board.users.filter((user) => user.toString() !== userId);
+  }
+
+  const updatedBoard = await board.save();
+
+  res.status(StatusCodes.OK).json({
+    message: `Successfully left ${updatedBoard.title}`,
+  });
+});
+
 // @desc Delete a board
 // @route DELETE /boards
 // @access Private
@@ -228,6 +303,12 @@ const deleteBoard = asyncHandler(async (req, res) => {
 
   if (!authorizeBoardAdmin(board, userId)) {
     throw new CustomError.UnauthorizedError(`User is not an admin: ${userId}`);
+  }
+
+  const notes = await Note.deleteMany({ boardId: id }).exec();
+
+  if (!notes) {
+    throw new CustomError.BadRequestError('Error deleting board notes');
   }
 
   const result = await board.deleteOne();
@@ -291,4 +372,5 @@ module.exports = {
   updateBoardUsers,
   deleteBoard,
   accessBoard,
+  leaveBoard,
 };
