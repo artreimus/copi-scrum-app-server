@@ -5,11 +5,11 @@ const {
   updateUser,
   getSingleUser,
 } = require('../controllers/userControllers');
-const verifyJWT = require('../middleware/verifyJWT');
-// router.use(verifyJWT);
 
-router.get('/', getAllUsers);
-// router.use(verifyRole);
-router.route('/:id').get(getSingleUser).patch(updateUser);
+const verifyJWT = require('../middleware/verifyJWT');
+router.use(verifyJWT);
+
+router.route('/').get(getAllUsers).patch(updateUser);
+router.route('/:id').get(getSingleUser);
 
 module.exports = router;

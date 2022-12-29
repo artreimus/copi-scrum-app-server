@@ -36,10 +36,11 @@ const getSingleUser = asyncHandler(async (req, res) => {
 });
 
 // @desc Update a user
-// @route PATCH /users/:id
+// @route PATCH /users
 // @access Private
 const updateUser = asyncHandler(async (req, res) => {
   const { username, email, oldPassword, newPassword } = req.body;
+  const { userId } = req;
 
   const foundUser = await User.findById(userId).exec();
 
