@@ -30,10 +30,10 @@ const getSingleNote = asyncHandler(async (req, res) => {
     .lean();
 
   if (!note) {
-    throw new CustomError.NotFoundError(`No board with id ${boardId}found`);
+    throw new CustomError.NotFoundError(`No note with id ${noteId} found`);
   }
 
-  res.status(StatusCodes.OK).json({ note, message: 'Note successfully found' });
+  res.status(StatusCodes.OK).json({ note, message: `Note found` });
 });
 
 // @desc Create new note
@@ -41,9 +41,7 @@ const getSingleNote = asyncHandler(async (req, res) => {
 // @access Private
 const createNote = asyncHandler(async (req, res) => {
   const { title, text, boardId, users } = req.body;
-  const userId = req.userId;
-
-  console.log('boardId', boardId);
+  const { userId } = req;
 
   if (!title || !text || !userId || !boardId) {
     throw new CustomError.BadRequestError('Please provide all fields');
@@ -66,7 +64,6 @@ const createNote = asyncHandler(async (req, res) => {
   if (duplicate?.boardId === boardId) {
     throw new CustomError.ConflictError(`Note title ${title} already taken`);
   }
-  console.log('good here');
 
   const noteInfo = {
     title,
@@ -126,7 +123,6 @@ const updateNote = asyncHandler(async (req, res) => {
 const updateNoteUsers = asyncHandler(async (req, res) => {
   const noteId = req.params.id;
   const { users } = req.body;
-  const { userId } = req;
 
   const note = await Note.findById(noteId).exec();
 
@@ -173,9 +169,7 @@ const deleteNote = asyncHandler(async (req, res) => {
 
   const result = await note.deleteOne();
 
-  const reply = `Note '${result.title}' with ID ${result._id} deleted`;
-
-  res.status(StatusCodes.OK).json({ message: reply });
+  res.status(StatusCodes.OK).json({ message: `Note ${result.title} deleted` });
 });
 
 module.exports = {

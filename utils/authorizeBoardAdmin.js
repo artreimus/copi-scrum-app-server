@@ -5,10 +5,6 @@ const authorizeBoardAdmin = (board, userId) => {
     isAuthorized = true;
   }
 
-  console.log('userId', userId);
-  console.log('admins', board.admins);
-  console.log('isAuthorized', isAuthorized);
-
   return isAuthorized;
 };
 

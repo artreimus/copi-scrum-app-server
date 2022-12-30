@@ -29,7 +29,7 @@ const getSingleUser = asyncHandler(async (req, res) => {
     .lean();
 
   if (!user) {
-    throw new CustomError.NotFoundError('User not found');
+    throw new CustomError.NotFoundError('No users found');
   }
 
   res.status(StatusCodes.OK).json({ user });

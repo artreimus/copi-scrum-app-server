@@ -19,7 +19,6 @@ const verifyJWT = (req, res, next) => {
         .json({ message: 'Invalid token', isError: true });
     req.userId = decoded.user.userId;
     req.username = decoded.user.username;
-    console.log('decoded', decoded.user.userId);
     next();
   });
 };

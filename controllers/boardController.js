@@ -36,9 +36,7 @@ const getSingleBoard = asyncHandler(async (req, res) => {
     throw new CustomError.NotFoundError(`No board with id ${boardId}found`);
   }
 
-  res
-    .status(StatusCodes.OK)
-    .json({ board, message: 'Board successfully found' });
+  res.status(StatusCodes.OK).json({ board, message: 'Board found' });
 });
 
 // @desc Create new board
@@ -78,7 +76,7 @@ const createBoard = asyncHandler(async (req, res) => {
   if (password) {
     if (password.length < 6) {
       throw new CustomError.BadRequestError(
-        `Password must be 6-100 characters`
+        'Password must be 6-100 characters'
       );
     }
     boardInfo.password = password;
@@ -122,7 +120,7 @@ const updateBoard = asyncHandler(async (req, res) => {
       .exec();
 
     if (duplicate && duplicate?._id.toString() !== boardId) {
-      throw new CustomError.ConflictError(`Title ${title} already taken`);
+      throw new CustomError.ConflictError(`Board title ${title} already taken`);
     }
     board.title = title;
   }
@@ -342,7 +340,9 @@ const accessBoard = asyncHandler(async (req, res) => {
 
   if (board.private) {
     if (!password) {
-      throw new CustomError.UnauthenticatedError('Please provide credentials');
+      throw new CustomError.UnauthenticatedError(
+        'Please provide board password'
+      );
     }
     const isPasswordCorrect = await board.comparePassword(password);
     if (!isPasswordCorrect) {

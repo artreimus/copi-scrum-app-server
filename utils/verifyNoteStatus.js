@@ -10,8 +10,6 @@ const verifyNoteStatus = ({ startDate, endDate, status }) => {
     return false;
   }
 
-  console.log(status, startDate);
-
   let flag = false;
 
   switch (status) {

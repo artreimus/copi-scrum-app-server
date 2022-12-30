@@ -18,7 +18,7 @@ const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
-    throw new CustomError.BadRequestError('Plea se provide username and email');
+    throw new CustomError.BadRequestError('Please provide all fields');
   }
 
   const usernameAlreadyExist = await User.findOne({ username })
@@ -32,9 +32,7 @@ const register = asyncHandler(async (req, res) => {
     .exec();
 
   if (usernameAlreadyExist || emailAlreadyExist) {
-    throw new CustomError.ConflictError(
-      `Credentials ${username} or ${email} already taken`
-    );
+    throw new CustomError.ConflictError('Username or email already exist');
   }
 
   const verificationToken = crypto.randomBytes(40).toString('hex');
@@ -45,8 +43,6 @@ const register = asyncHandler(async (req, res) => {
     password,
     verificationToken,
   });
-
-  const origin = 'http://localhost:5137';
 
   const user = createTokenUser(newUser);
 
@@ -69,7 +65,7 @@ const login = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username && !email) {
-    throw new CustomError.BadRequestError('Please provide username or email');
+    throw new CustomError.BadRequestError('Please provide all fields');
   }
 
   let foundUser;
@@ -121,7 +117,7 @@ const refresh = asyncHandler(async (req, res) => {
       if (!foundUser) {
         return res
           .status(StatusCodes.UNAUTHORIZED)
-          .json({ message: 'Invalid token. User not found' });
+          .json({ message: 'Invalid token. Please login' });
       }
 
       const user = createTokenUser(foundUser);
@@ -147,7 +143,7 @@ const logout = asyncHandler(async (req, res) => {
     sameSite: 'None',
     secure: true,
   });
-  res.status(StatusCodes.OK).json({ message: 'Cookie successfully Cleared' });
+  res.status(StatusCodes.OK).json({ message: 'Cookie successfully cleared' });
 });
 
 module.exports = { register, login, refresh, logout };
