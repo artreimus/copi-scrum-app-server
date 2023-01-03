@@ -16,10 +16,6 @@ const getAllBoards = asyncHandler(async (req, res) => {
     .lean()
     .select('-password');
 
-  if (!boards?.length) {
-    throw new CustomError.NotFoundError('No board found');
-  }
-
   res.status(StatusCodes.OK).json(boards);
 });
 
@@ -29,7 +25,7 @@ const getAllBoards = asyncHandler(async (req, res) => {
 const getSingleBoard = asyncHandler(async (req, res) => {
   const { id: boardId } = req.params;
   const board = await Board.findById(boardId)
-    .populate({ path: 'admins users', select: 'username' })
+    .populate({ path: 'admins users', select: 'username image' })
     .lean();
 
   if (!board) {

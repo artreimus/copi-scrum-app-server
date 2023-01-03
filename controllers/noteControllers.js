@@ -14,7 +14,7 @@ const getAllNotes = asyncHandler(async (req, res) => {
   const { boardId } = req.query;
 
   const notes = await Note.find({ boardId })
-    .populate({ path: 'users', select: 'username' })
+    .populate({ path: 'users', select: 'username image' })
     .lean();
 
   res.status(StatusCodes.OK).json(notes);
@@ -26,7 +26,7 @@ const getAllNotes = asyncHandler(async (req, res) => {
 const getSingleNote = asyncHandler(async (req, res) => {
   const { id: noteId } = req.params;
   const note = await Note.findById(noteId)
-    .populate({ path: 'users', select: 'username' })
+    .populate({ path: 'users', select: 'username image' })
     .lean();
 
   if (!note) {
