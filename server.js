@@ -11,6 +11,13 @@ const corsOptions = require('./config/corsOptions');
 const connectDB = require('./config/dbConn');
 const mongoose = require('mongoose');
 const { queryParser } = require('express-query-parser');
+const fileUpload = require('express-fileupload');
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_CLOUD_API_KEY,
+  api_secret: process.env.CLOUDINARY_CLOUD_API_SECRET,
+});
 
 connectDB();
 
@@ -18,6 +25,7 @@ connectDB();
 app.use(loggerMiddleware);
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(fileUpload({ useTempFiles: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
   queryParser({

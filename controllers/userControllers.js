@@ -39,7 +39,7 @@ const getSingleUser = asyncHandler(async (req, res) => {
 // @route PATCH /users
 // @access Private
 const updateUser = asyncHandler(async (req, res) => {
-  const { username, email, oldPassword, newPassword } = req.body;
+  const { username, email, oldPassword, newPassword, image } = req.body;
   const { userId } = req;
 
   const foundUser = await User.findById(userId).exec();
@@ -80,6 +80,10 @@ const updateUser = asyncHandler(async (req, res) => {
     foundUser.password = newPassword;
   }
 
+  if (image) {
+    foundUser.image = image;
+  }
+
   const updatedUser = await foundUser.save();
 
   const user = createTokenUser(updatedUser);
@@ -91,6 +95,8 @@ const updateUser = asyncHandler(async (req, res) => {
   );
 
   attachCookieToResponse({ res, user });
+
+  console.log(updatedUser);
 
   res
     .status(StatusCodes.OK)
