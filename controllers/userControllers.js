@@ -96,8 +96,6 @@ const updateUser = asyncHandler(async (req, res) => {
 
   attachCookieToResponse({ res, user });
 
-  console.log(updatedUser);
-
   res
     .status(StatusCodes.OK)
     .json({ message: `${updatedUser.username} updated`, accessToken });
