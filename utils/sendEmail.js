@@ -1,9 +1,11 @@
 const nodemailer = require('nodemailer');
 const nodemailerConfig = require('./nodemailerConfig');
+const sgMail = require('@sendgrid/mail');
 
-const sendEmail = async ({ to, subject, html }) => {
-  let testAccount = await nodemailer.createTestAccount();
-  let transporter = nodemailer.createTransport(nodemailerConfig);
+// developlment email service
+const sendEmailNodeMailer = async ({ to, subject, html }) => {
+  const testAccount = await nodemailer.createTestAccount();
+  const transporter = nodemailer.createTransport(nodemailerConfig);
   return transporter.sendMail({
     from: '"Arthur Reimus 👻" <artrei.dev@gmail.com>',
     to,
@@ -12,4 +14,18 @@ const sendEmail = async ({ to, subject, html }) => {
   }); // we dont have to use await because async returns a promise by default
 };
 
-module.exports = sendEmail;
+// production email service
+const sendEmailSendGrid = async ({ to, subject, html }) => {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+  const msg = {
+    to,
+    from: 'artrei.dev@gmail.com',
+    subject,
+    html,
+  };
+
+  return sgMail.send(msg);
+};
+
+module.exports = sendEmailSendGrid;
