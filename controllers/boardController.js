@@ -233,14 +233,23 @@ const updateBoardUsers = asyncHandler(async (req, res) => {
 
   const allUsers = await User.find().select('_id');
 
-  if (!allUsers.length) {
-    throw new CustomError.NotFoundError('No users found');
-  }
-
   const existingUsers = [];
   allUsers.forEach((user) => {
     if (users?.includes(user._id.toString())) existingUsers.push(user._id);
   });
+
+  // removed user
+  const removedUsers = board.users.filter(
+    (user) => existingUsers.indexOf(user) === -1
+  );
+
+  const removedUsersNotes = await Note.updateMany(
+    {
+      boardId,
+      users: { $in: removedUsers },
+    },
+    { $pull: { users: { $in: removedUsers } } }
+  );
 
   board.users = [...existingUsers];
 
@@ -270,6 +279,13 @@ const leaveBoard = asyncHandler(async (req, res) => {
   } else {
     board.users = board.users.filter((user) => user.toString() !== userId);
   }
+
+  const userNotes = await Note.updateMany(
+    {
+      boardId,
+    },
+    { $pull: { users: userId } }
+  );
 
   const updatedBoard = await board.save();
 
