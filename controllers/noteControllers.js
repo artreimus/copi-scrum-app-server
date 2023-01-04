@@ -27,6 +27,7 @@ const getSingleNote = asyncHandler(async (req, res) => {
   const { id: noteId } = req.params;
   const note = await Note.findById(noteId)
     .populate({ path: 'users', select: 'username image' })
+    .populate({ path: 'boardId', select: 'title' })
     .lean();
 
   if (!note) {
@@ -61,7 +62,7 @@ const createNote = asyncHandler(async (req, res) => {
     .exec();
 
   // title must be unique per board
-  if (duplicate?.boardId === boardId) {
+  if (duplicate?.boardId.toString() === boardId) {
     throw new CustomError.ConflictError(`Note title ${title} already taken`);
   }
 
