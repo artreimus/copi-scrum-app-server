@@ -1,7 +1,3 @@
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://copi.com',
-  'https://www.copi.com',
-];
+const allowedOrigins = ['https://copi-scrum.onrender.com/'];
 
 module.exports = allowedOrigins;

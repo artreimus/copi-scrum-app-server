@@ -1,7 +1,7 @@
 {
-  "name": "copi",
+  "name": "copi_scrum_app-backend",
   "version": "1.0.0",
-  "description": "MERN Notes Application",
+  "description": "Scrum application made using the MERN stack",
   "main": "server.js",
   "scripts": {
     "start": "node server",
