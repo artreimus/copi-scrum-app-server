@@ -12,12 +12,15 @@ const sendResetPasswordEmail = async ({ name, email, token, origin }) => {
         style="@import url(https://fonts.googleapis.com/css?family=Rubik:300,400,500,700|Open+Sans:300,400,600,700); font-family: 'Open Sans', sans-serif;">
         <tr>
             <td>
-                <table style="background-color: #f2f3f8; max-width:670px;  margin:0 auto;" width="100%" border="0"
+                <table style="background-color: #f2f3f8; max-width:800px;  margin:0 auto;" width="100%" border="0"
                     align="center" cellpadding="0" cellspacing="0">
                     <tr>
+                        <td style="height:20px;">&nbsp;</td>
+                    </tr>
+                    <tr>
                         <td style="text-align:center;">
-                          <a href="https://res.cloudinary.com/dp04mqgzv/image/upload/v1672732002/copi-assets/copi-logo.png" title="logo" target="_blank">
-                            <img width="300" src="https://res.cloudinary.com/dp04mqgzv/image/upload/v1672732002/copi-assets/copi-logo.png" title="logo" alt="logo" style="display:inline-block margin:auto" width="200" height="200">
+                          <a href="https://res.cloudinary.com/dp04mqgzv/image/upload/v1672900539/copi-assets/logo-sm.png" title="logo" target="_blank">
+                            <img src="https://res.cloudinary.com/dp04mqgzv/image/upload/v1672900539/copi-assets/logo-sm.png" title="logo" alt="logo" style="display:inline-block margin:auto">
                           </a>
                         </td>
                     </tr>
@@ -38,9 +41,9 @@ const sendResetPasswordEmail = async ({ name, email, token, origin }) => {
                                         <span
                                             style="display:inline-block; vertical-align:middle; margin:29px 0 26px; border-bottom:1px solid #cecece; width:100px;"></span>
                                         <p style="color:#455056; font-size:15px;line-height:24px; margin:0;">
-                                            We cannot simply send you your old password. A unique link to reset your
-                                            password has been generated for you. To reset your password, click the
-                                            following link and follow the instructions.
+                                            We received a request to reset the password for you account. If you made 
+                                            this request please click the button below. The request will expire in 
+                                            24 hours. If you did not request a password reset, pleae ignore this email.
                                         </p>
                                         <a href="${resetURL}"
                                             style="background:#3861f6;text-decoration:none !important; font-weight:500; margin-top:35px; color:#fff;text-transform:uppercase; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Reset
