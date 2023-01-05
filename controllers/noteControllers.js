@@ -20,6 +20,20 @@ const getAllNotes = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json(notes);
 });
 
+// @desc Get user notes
+// @route GET /notes/user-notes
+// @access Private
+const getUserNotes = asyncHandler(async (req, res) => {
+  const { userId } = req;
+
+  const notes = await Note.find({ users: userId })
+    .populate({ path: 'users', select: 'username image' })
+    .populate({ path: 'boardId', select: 'title' })
+    .lean();
+
+  res.status(StatusCodes.OK).json(notes);
+});
+
 // @desc Get note
 // @route GET /boards/:id
 // @access Public
@@ -175,6 +189,7 @@ const deleteNote = asyncHandler(async (req, res) => {
 
 module.exports = {
   getAllNotes,
+  getUserNotes,
   getSingleNote,
   createNote,
   updateNote,
